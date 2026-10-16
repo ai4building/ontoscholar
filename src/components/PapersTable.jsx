@@ -1,7 +1,7 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function PapersTable({ papers }) {
+export default function PapersTable({ papers, onToggle }) {
   if (!papers.length) return null;
   return (
     <div className="overflow-hidden rounded-xl border">
@@ -11,6 +11,7 @@ export default function PapersTable({ papers }) {
             <th className="px-3 py-2 font-medium">文献</th>
             <th className="px-3 py-2 font-medium">决定</th>
             <th className="px-3 py-2 font-medium">理由</th>
+            {onToggle && <th className="px-3 py-2 font-medium">人工改判</th>}
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -40,6 +41,16 @@ export default function PapersTable({ papers }) {
                 </span>
               </td>
               <td className="max-w-[240px] px-3 py-2 text-muted-foreground">{p.decision_reason}</td>
+              {onToggle && (
+                <td className="px-3 py-2">
+                  <button
+                    onClick={() => onToggle(p)}
+                    className="whitespace-nowrap rounded-md border px-2 py-1 text-[11px] transition hover:bg-accent"
+                  >
+                    改为{p.decision === "included" ? "排除" : "纳入"}
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

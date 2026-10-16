@@ -51,6 +51,24 @@ export default function QuestionDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  const toggleDecision = async (p) => {
+    await base44.entities.Paper.update(p.id, {
+      decision: p.decision === "included" ? "excluded" : "included",
+      decision_reason: "人工改判",
+    });
+    await load();
+  };
+
+  const reviewClaim = async (claimId, status) => {
+    await base44.entities.Claim.update(claimId, { review_status: status });
+    await load();
+  };
+
+  const updateClaim = async (claimId, patch) => {
+    await base44.entities.Claim.update(claimId, patch);
+    await load();
+  };
+
   const runStep = async (step) => {
     if (running) return;
     setRunning(step.key);
@@ -82,6 +100,7 @@ export default function QuestionDetail() {
   }
 
   const includedCount = papers.filter((p) => p.decision === "included").length;
+  const paperById = Object.fromEntries(papers.map((p) => [p.id, p]));
   const claimById = Object.fromEntries(claims.map((c) => [c.id, c]));
 
   return (
@@ -135,7 +154,7 @@ export default function QuestionDetail() {
       {papers.length > 0 && (
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold">检索与筛选结果</h3>
-          <PapersTable papers={papers} />
+          <PapersTable papers={papers} onToggle={toggleDecision} />
         </section>
       )}
 
@@ -145,7 +164,7 @@ export default function QuestionDetail() {
           <h3 className="mb-2 text-sm font-semibold">研究主张（每条可回溯原文证据）</h3>
           <div className="space-y-3">
             {claims.map((c) => (
-              <ClaimCard key={c.id} claim={c} paper={claimById[c.paper_id]} />
+              <ClaimCard key={c.id} claim={c} paper={paperById[c.paper_id]} onReview={reviewClaim} onUpdate={updateClaim} />
             ))}
           </div>
         </section>
@@ -167,14 +186,26 @@ export default function QuestionDetail() {
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold">可比性判定</h3>
           <div className="space-y-2">
-            {pairs.map((p) => (
-              <div key={p.id} className="rounded-xl border bg-card p-3 text-sm">
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${VERDICT_CLS[p.verdict] || "bg-muted"}`}>
-                  {p.verdict}
-                </span>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{p.explanation}</p>
-              </div>
-            ))}
+            {pairs.map((p) => {
+              const a = claimById[p.claim_a_id];
+              const b = claimById[p.claim_b_id];
+              return (
+                <div key={p.id} className="rounded-xl border bg-card p-3 text-sm">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${VERDICT_CLS[p.verdict] || "bg-muted"}`}>
+                    {p.verdict}
+                  </span>
+                  <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+                    {[a, b].map((c, i) => (
+                      <div key={i} className="rounded-lg bg-muted/60 px-2.5 py-2">
+                        <p className="text-[11px] font-medium text-muted-foreground">主张 {i === 0 ? "A" : "B"}{c?.paper_id && paperById[c.paper_id] ? ` · ${paperById[c.paper_id].title}` : ""}</p>
+                        <p className="mt-0.5 leading-relaxed">{c?.result_summary || "（该主张已被删除）"}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{p.explanation}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
