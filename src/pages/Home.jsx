@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Inbox, ArrowRight, Shapes } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import ResearchTrends from "@/components/ResearchTrends";
 
 const STATUS_LABEL = {
   created: "待检索",
@@ -109,6 +110,9 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* 研究趋势 */}
+      <ResearchTrends />
 
       {/* 领域种子本体 */}
       <div className="mt-8">
