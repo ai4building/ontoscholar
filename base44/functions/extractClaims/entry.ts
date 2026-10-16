@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 
-// Agent ④⑤⑥: 结构化抽取 + 本体对齐 + 审校闸门（置信度高的直接入库，其余进审核队列）
+// Agent ④⑤⑥: 结构化抽取 + 本体对齐 + 审校闸门（所有主张一律先入审核队列，人工确认后才发布入库）
 export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
@@ -110,7 +110,7 @@ method（控制方法）、building_type（建筑类型）、climate_zone（气�
           evidence_source: c.evidence_source || '',
           confidence: typeof c.confidence === 'number' ? c.confidence : 0.5,
           aligned_concepts: c.aligned_concepts || '',
-          review_status: (typeof c.confidence === 'number' && c.confidence >= 0.85) ? 'approved' : 'pending',
+          review_status: 'pending',
         });
       }
       for (const pc of (data.proposed_concepts || []).slice(0, 2)) {

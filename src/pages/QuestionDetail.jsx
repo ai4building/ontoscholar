@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  ArrowLeft, Search, Layers, GitCompareArrows, Loader2, AlertTriangle, Table2, ChartColumn,
+  ArrowLeft, Search, Layers, GitCompareArrows, Loader2, AlertTriangle, Table2, ChartColumn, CheckCheck,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import PapersTable from "@/components/PapersTable";
@@ -29,6 +29,7 @@ export default function QuestionDetail() {
   const [claims, setClaims] = useState([]);
   const [pairs, setPairs] = useState([]);
   const [running, setRunning] = useState(null);
+  const [reviewing, setReviewing] = useState(false);
   const [error, setError] = useState(null);
   const [missing, setMissing] = useState(false);
 
@@ -68,6 +69,19 @@ export default function QuestionDetail() {
   const updateClaim = async (claimId, patch) => {
     await base44.entities.Claim.update(claimId, patch);
     await load();
+  };
+
+  const reviewAll = async (status) => {
+    if (reviewing) return;
+    setReviewing(true);
+    try {
+      await base44.entities.Claim.bulkUpdate(
+        claims.filter((c) => c.review_status === "pending").map((c) => ({ id: c.id, review_status: status }))
+      );
+      await load();
+    } finally {
+      setReviewing(false);
+    }
   };
 
   const runStep = async (step) => {
@@ -163,6 +177,37 @@ export default function QuestionDetail() {
       {claims.length > 0 && (
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold">研究主张（每条可回溯原文证据）</h3>
+          {claims.some((c) => c.review_status === "pending") ? (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="text-xs text-amber-800">
+                抽取完成，{claims.filter((c) => c.review_status === "pending").length} 条主张待人工确认，
+                确认无误后才会发布到最终科研知识库。
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => reviewAll("approved")}
+                  disabled={reviewing}
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-700 disabled:opacity-40"
+                >
+                  {reviewing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCheck className="h-3.5 w-3.5" />}
+                  全部确认并发布
+                </button>
+                <button
+                  onClick={() => reviewAll("rejected")}
+                  disabled={reviewing}
+                  className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground transition hover:bg-accent disabled:opacity-40"
+                >
+                  全部拒绝
+                </button>
+              </div>
+            </div>
+          ) : (
+            claims.length > 0 && (
+              <p className="mb-3 text-xs text-emerald-700">
+                本问题的主张已全部人工确认，均已进入最终科研知识库。
+              </p>
+            )
+          )}
           <div className="space-y-3">
             {claims.map((c) => (
               <ClaimCard key={c.id} claim={c} paper={paperById[c.paper_id]} onReview={reviewClaim} onUpdate={updateClaim} />
