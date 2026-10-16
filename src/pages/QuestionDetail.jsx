@@ -30,6 +30,7 @@ export default function QuestionDetail() {
   const [pairs, setPairs] = useState([]);
   const [running, setRunning] = useState(null);
   const [reviewing, setReviewing] = useState(false);
+  const [preset, setPreset] = useState(null);
   const [error, setError] = useState(null);
   const [missing, setMissing] = useState(false);
 
@@ -59,6 +60,14 @@ export default function QuestionDetail() {
       decision_reason: "人工改判",
     });
     await load();
+  };
+
+  const askAbout = (claim) => {
+    setPreset({
+      query: `「${claim.result_summary}」这条结论的依据和适用条件是什么？`,
+      paper_id: claim.paper_id,
+      ts: Date.now(),
+    });
   };
 
   const reviewClaim = async (claimId, status) => {
@@ -210,7 +219,7 @@ export default function QuestionDetail() {
           )}
           <div className="space-y-3">
             {claims.map((c) => (
-              <ClaimCard key={c.id} claim={c} paper={paperById[c.paper_id]} onReview={reviewClaim} onUpdate={updateClaim} />
+              <ClaimCard key={c.id} claim={c} paper={paperById[c.paper_id]} onReview={reviewClaim} onUpdate={updateClaim} onAsk={askAbout} />
             ))}
           </div>
         </section>
@@ -273,7 +282,7 @@ export default function QuestionDetail() {
       {claims.length > 0 && (
         <section className="mt-6">
           <h3 className="mb-2 text-sm font-semibold">溯源查询</h3>
-          <QueryBox questionId={id} />
+          <QueryBox questionId={id} preset={preset} />
         </section>
       )}
     </div>

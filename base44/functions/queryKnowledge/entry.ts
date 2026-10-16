@@ -10,29 +10,34 @@ export default async function(req: Request): Promise<Response> {
     const body = await req.json().catch(() => ({}));
     const questionId = String(body.question_id || '');
     const query = String(body.query || '').trim();
+    const paperFilter = String(body.paper_id || '');
     if (!questionId || !query) return Response.json({ error: 'question_id 和 query 均为必填' }, { status: 400 });
 
     const approved = await base44.asServiceRole.entities.Claim.filter(
       { question_id: questionId, review_status: 'approved' },
       { limit: 30 }
     );
-    if (!approved.items.length) {
+    const scoped = paperFilter ? approved.items.filter((c: any) => c.paper_id === paperFilter) : approved.items;
+    if (!scoped.length) {
       return Response.json({
         rejected: true,
-        answer: '知识库中尚无已审核（approved）的主张可支撑该问题，按设计明确拒答：请先完成抽取并完成审核。',
+        answer: paperFilter
+          ? '该文献在知识库中没有已审核的主张可支撑该问题，按设计明确拒答：请先完成抽取并完成审核。'
+          : '知识库中尚无已审核（approved）的主张可支撑该问题，按设计明确拒答：请先完成抽取并完成审核。',
       });
     }
 
     const papers = await base44.asServiceRole.entities.Paper.filter(
       { question_id: questionId },
-      { limit: 20, fields: ['title', 'year', 'venue'] }
+      { limit: 20, fields: ['title', 'year', 'venue', 'url'] }
     );
     const paperTitle = new Map(papers.items.map((p: any) => [p.id, p]));
-    const evidence = approved.items.map((c: any, i: number) => {
+    const evidence = scoped.map((c: any, i: number) => {
       const p: any = paperTitle.get(c.paper_id) || {};
       return {
         n: i + 1,
         paper: `${p.title || '未知文献'}${p.year ? '（' + p.year + '）' : ''}`,
+        url: p.url || '',
         method: c.method,
         metric: c.metric,
         metric_value: c.metric_value ? `${c.metric_value}${c.metric_unit || ''}` : '',
@@ -54,7 +59,11 @@ ${JSON.stringify(evidence, null, 1)}
     });
 
     const rejected = typeof llm === 'string' && llm.trim().startsWith('拒答');
-    return Response.json({ answer: typeof llm === 'string' ? llm : JSON.stringify(llm), rejected });
+    return Response.json({
+      answer: typeof llm === 'string' ? llm : JSON.stringify(llm),
+      rejected,
+      sources: evidence,
+    });
   } catch (error: any) {
     return Response.json({ error: error?.message || 'Unknown error' }, { status: 500 });
   }

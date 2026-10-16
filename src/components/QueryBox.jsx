@@ -1,12 +1,37 @@
-import { useState } from "react";
-import { Send, ShieldAlert } from "lucide-react";
+// 溯源查询：基于已审核知识库提问，[n] 引用可点击跳转到溯源来源（含原文链接）
+import { useState, useEffect, useRef } from "react";
+import { Send, ShieldAlert, Link2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { cn } from "@/lib/utils";
 
-export default function QueryBox({ questionId }) {
+export default function QueryBox({ questionId, preset }) {
   const [query, setQuery] = useState("");
+  const [paperFilter, setPaperFilter] = useState("");
+  const [papers, setPapers] = useState([]);
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [highlight, setHighlight] = useState(null);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      const p = await base44.entities.Paper.filter(
+        { question_id: questionId },
+        { sort: "-created_date", limit: 50, fields: ["title"] }
+      );
+      setPapers(p.items);
+    })();
+  }, [questionId]);
+
+  // 来自主张卡片「提问」按钮的预填
+  useEffect(() => {
+    if (preset) {
+      setQuery(preset.query);
+      setPaperFilter(preset.paper_id || "");
+      boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [preset]);
 
   const ask = async () => {
     if (!query.trim() || loading) return;
@@ -17,6 +42,7 @@ export default function QueryBox({ questionId }) {
       const response = await base44.functions.invoke('queryKnowledge', {
         question_id: questionId,
         query: query.trim(),
+        ...(paperFilter ? { paper_id: paperFilter } : {}),
       });
       setAnswer(response.data);
     } catch (err) {
@@ -26,8 +52,16 @@ export default function QueryBox({ questionId }) {
     }
   };
 
+  const jumpToSource = (n) => {
+    setHighlight(n);
+    document.getElementById(`src-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => setHighlight(null), 2000);
+  };
+
+  const parts = answer?.answer ? answer.answer.split(/(\[\d+\])/g) : [];
+
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div ref={boxRef} className="rounded-xl border bg-card p-4">
       <div className="flex items-center gap-2">
         <input
           value={query}
@@ -36,6 +70,19 @@ export default function QueryBox({ questionId }) {
           placeholder="基于知识库提问，例如：MPC 与 RL 控制的节能率差异如何？"
           className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
         />
+        {papers.length > 1 && (
+          <select
+            value={paperFilter}
+            onChange={(e) => setPaperFilter(e.target.value)}
+            className="rounded-lg border bg-background px-2 py-2 text-xs outline-none"
+            title="限定只基于某篇文献的已审核主张回答"
+          >
+            <option value="">全部文献</option>
+            {papers.map((p) => (
+              <option key={p.id} value={p.id}>{p.title.slice(0, 30)}</option>
+            ))}
+          </select>
+        )}
         <button
           onClick={ask}
           disabled={loading || !query.trim()}
@@ -54,7 +101,57 @@ export default function QueryBox({ questionId }) {
               无足够证据，明确拒答
             </p>
           )}
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{answer.answer}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            {parts.map((part, i) => {
+              const m = part.match(/^\[(\d+)\]$/);
+              if (!m) return <span key={i}>{part}</span>;
+              const n = Number(m[1]);
+              return (
+                <button
+                  key={i}
+                  onClick={() => jumpToSource(n)}
+                  className="mx-0.5 inline-flex items-center rounded bg-sky-100 px-1 text-[11px] font-medium text-sky-700 transition hover:bg-sky-200"
+                  title="跳转到溯源来源"
+                >
+                  [{n}]
+                </button>
+              );
+            })}
+          </p>
+          {answer.sources?.length > 0 && (
+            <div className="mt-2.5 border-t pt-2.5">
+              <p className="text-[11px] font-medium text-muted-foreground">溯源来源（点击上方 [n] 定位）</p>
+              <div className="mt-1.5 space-y-1.5">
+                {answer.sources.map((s) => (
+                  <div
+                    key={s.n}
+                    id={`src-${s.n}`}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-2 text-xs transition",
+                      highlight === s.n ? "border-sky-400 bg-sky-50" : "bg-background"
+                    )}
+                  >
+                    <p className="font-medium">
+                      [{s.n}] {s.paper}
+                      {s.url && (
+                        <a
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="ml-2 inline-flex items-center gap-0.5 text-sky-700 underline"
+                        >
+                          原文链接 <Link2 className="h-3 w-3" />
+                        </a>
+                      )}
+                    </p>
+                    {s.evidence_text && (
+                      <p className="mt-0.5 leading-relaxed text-muted-foreground">证据：{s.evidence_text}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

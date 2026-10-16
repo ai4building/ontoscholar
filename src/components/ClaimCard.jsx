@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BadgeCheck, Clock, XCircle, Quote, Pencil, Check, X } from "lucide-react";
+import { BadgeCheck, Clock, XCircle, Quote, Pencil, Check, X, MessageCircleQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
@@ -20,7 +20,7 @@ const FIELDS = [
   ["operating_condition", "运行工况"],
 ];
 
-export default function ClaimCard({ claim, paper, onReview, onUpdate }) {
+export default function ClaimCard({ claim, paper, onReview, onUpdate, onAsk }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
   const s = STATUS[claim.review_status] || STATUS.pending;
@@ -55,8 +55,17 @@ export default function ClaimCard({ claim, paper, onReview, onUpdate }) {
             {claim.metric} {claim.metric_value ? `${claim.metric_value}${claim.metric_unit || ""}` : ""}
           </span>
         )}
-        {editable && !editing && (
+        {!editing && (editable || onAsk) && (
           <div className="ml-auto flex items-center gap-1.5">
+            {onAsk && !editing && (
+              <button
+                onClick={() => onAsk(claim)}
+                className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition hover:bg-accent"
+                title="基于这条已抽取的信息发起溯源提问"
+              >
+                <MessageCircleQuestion className="h-3 w-3" /> 提问
+              </button>
+            )}
             {onUpdate && (
               <button
                 onClick={startEdit}
