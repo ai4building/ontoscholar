@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 
 export default function ChatInput({ onSend, disabled, onStop, streaming }) {
   const [value, setValue] = useState("");
@@ -29,14 +29,9 @@ export default function ChatInput({ onSend, disabled, onStop, streaming }) {
           className="max-h-40 min-h-6 flex-1 resize-none bg-transparent py-1.5 text-sm outline-none placeholder:text-muted-foreground"
         />
         {streaming ? (
-          <button
-            type="button"
-            onClick={onStop}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition hover:bg-accent"
-            aria-label="Stop"
-          >
-            <Square className="h-3.5 w-3.5" fill="currentColor" />
-          </button>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+          </div>
         ) : (
           <button
             type="submit"

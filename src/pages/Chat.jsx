@@ -1,20 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, RotateCcw, FlaskConical } from "lucide-react";
+import { Sparkles, RotateCcw, FlaskConical, AlertCircle } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
-
-// Local sample data — replaced by live SciencePal responses once the backend is wired.
-const SAMPLE_MESSAGES = [
-  {
-    role: "user",
-    content: "Summarize the key claims from the OntoScholar proposal in three bullets.",
-  },
-  {
-    role: "assistant",
-    content:
-      "Here is a preview of what a connected SciencePal agent will return:\n\n• OntoScholar uses an ontology to constrain LLM output across seven cooperating agents.\n• It turns literature into a knowledge graph of traceable research claims.\n• The demo domain is AI-based energy-saving control for building HVAC systems.\n\n(This is placeholder text — connect your API key to get real agent responses.)",
-  },
-];
+import AgentPicker from "@/components/AgentPicker";
 
 const SUGGESTIONS = [
   "Summarize the OntoScholar proposal's core contribution",
@@ -23,35 +12,58 @@ const SUGGESTIONS = [
 ];
 
 export default function Chat() {
-  const [messages, setMessages] = useState(SAMPLE_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(false);
   const [threadId, setThreadId] = useState(null);
+  const [agentId, setAgentId] = useState(null);
+  const [agents, setAgents] = useState([]);
+  const [defaultAgentId, setDefaultAgentId] = useState(null);
+  const [error, setError] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = (text) => {
+  useEffect(() => {
+    // Non-blocking: if the agent list fails, the default secret agent is still used.
+    (async () => {
+      try {
+        const response = await base44.functions.invoke('sciencepalAgents', {});
+        setAgents(response.data.agents || []);
+        setDefaultAgentId(response.data.default_agent_id || null);
+        setAgentId(response.data.default_agent_id || null);
+      } catch {
+        // leave agents empty; the default agent is used
+      }
+    })();
+  }, []);
+
+  const handleSend = async (text) => {
     setMessages((prev) => [...prev, { role: "user", content: text }]);
+    setError(null);
     setStreaming(true);
-    // Placeholder: simulates a delayed assistant reply until backend is wired.
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Backend not connected yet. Add your SciencePal API key and agent ID in app secrets to enable live responses.",
-        },
-      ]);
+    try {
+      const response = await base44.functions.invoke('sciencepalChat', {
+        prompt: text,
+        thread_id: threadId || undefined,
+        agent_id: agentId || undefined,
+      });
+      const data = response.data;
+      if (data.thread_id) setThreadId(data.thread_id);
+      setMessages((prev) => [...prev, { role: "assistant", content: data.reply || "(empty response)" }]);
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || "Request failed";
+      setError(msg);
+    } finally {
       setStreaming(false);
-    }, 900);
+    }
   };
 
   const handleReset = () => {
     setMessages([]);
     setThreadId(null);
+    setError(null);
   };
 
   const isEmpty = messages.length === 0;
@@ -69,14 +81,25 @@ export default function Chat() {
             <p className="text-[11px] text-muted-foreground">Agent conversation bridge</p>
           </div>
         </div>
-        <button
-          onClick={handleReset}
-          className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-accent"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          New thread
-        </button>
+        <div className="flex items-center gap-2">
+          <AgentPicker agents={agents} agentId={agentId} onChange={setAgentId} defaultAgentId={defaultAgentId} />
+          <button
+            onClick={handleReset}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-accent"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            New thread
+          </button>
+        </div>
       </header>
+
+      {/* Error banner */}
+      {error && (
+        <div className="mx-auto mt-3 flex max-w-3xl items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="break-words">{error}</span>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
@@ -117,7 +140,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <ChatInput onSend={handleSend} disabled={streaming} streaming={streaming} onStop={handleReset} />
+      <ChatInput onSend={handleSend} disabled={streaming} streaming={streaming} />
     </div>
   );
 }
