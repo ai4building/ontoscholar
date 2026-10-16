@@ -1,0 +1,56 @@
+import { useState } from "react";
+import { ArrowUp, Square } from "lucide-react";
+
+export default function ChatInput({ onSend, disabled, onStop, streaming }) {
+  const [value, setValue] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    const trimmed = value.trim();
+    if (!trimmed || disabled) return;
+    onSend(trimmed);
+    setValue("");
+  };
+
+  return (
+    <form onSubmit={submit} className="px-4 sm:px-6 pb-5 pt-2">
+      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-background px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+        <textarea
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              submit(e);
+            }
+          }}
+          rows={1}
+          placeholder="Ask your SciencePal agent anything…"
+          className="max-h-40 min-h-6 flex-1 resize-none bg-transparent py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+        />
+        {streaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition hover:bg-accent"
+            aria-label="Stop"
+          >
+            <Square className="h-3.5 w-3.5" fill="currentColor" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={disabled || !value.trim()}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background transition hover:opacity-80 disabled:opacity-30"
+            aria-label="Send"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground">
+        Powered by SciencePal · conversations are stored on your SciencePal account
+      </p>
+    </form>
+  );
+}
