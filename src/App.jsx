@@ -8,6 +8,10 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 // Add page imports here
 import Chat from './pages/Chat';
+import Home from './pages/Home';
+import QuestionDetail from './pages/QuestionDetail';
+import ReviewQueue from './pages/ReviewQueue';
+import AppShell from './components/AppShell';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -36,7 +40,12 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       {/* Add your page Route elements here */}
-      <Route path="/" element={<Chat />} />
+      <Route element={<AppShell />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/questions/:id" element={<QuestionDetail />} />
+        <Route path="/review" element={<ReviewQueue />} />
+      </Route>
+      <Route path="/chat" element={<Chat />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

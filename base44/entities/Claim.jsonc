@@ -1,0 +1,69 @@
+{
+  "name": "Claim",
+  "type": "object",
+  "properties": {
+    "question_id": {
+      "type": "string"
+    },
+    "paper_id": {
+      "type": "string"
+    },
+    "method": {
+      "type": "string"
+    },
+    "building_type": {
+      "type": "string"
+    },
+    "climate_zone": {
+      "type": "string"
+    },
+    "dataset": {
+      "type": "string"
+    },
+    "metric": {
+      "type": "string"
+    },
+    "metric_value": {
+      "type": "string"
+    },
+    "metric_unit": {
+      "type": "string"
+    },
+    "operating_condition": {
+      "type": "string"
+    },
+    "result_summary": {
+      "type": "string"
+    },
+    "condition_summary": {
+      "type": "string"
+    },
+    "evidence_text": {
+      "type": "string"
+    },
+    "evidence_source": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "aligned_concepts": {
+      "type": "string"
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "question_id",
+    "paper_id",
+    "result_summary",
+    "evidence_text"
+  ]
+}

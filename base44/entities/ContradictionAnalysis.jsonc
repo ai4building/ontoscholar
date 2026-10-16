@@ -1,0 +1,37 @@
+{
+  "name": "ContradictionAnalysis",
+  "type": "object",
+  "properties": {
+    "question_id": {
+      "type": "string"
+    },
+    "claim_a_id": {
+      "type": "string"
+    },
+    "claim_b_id": {
+      "type": "string"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "\u771f\u5b9e\u77db\u76fe",
+        "\u6761\u4ef6\u5dee\u5f02",
+        "\u7814\u7a76\u7a7a\u767d"
+      ]
+    },
+    "explanation": {
+      "type": "string"
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "question_id",
+    "claim_a_id",
+    "claim_b_id",
+    "verdict",
+    "explanation"
+  ]
+}

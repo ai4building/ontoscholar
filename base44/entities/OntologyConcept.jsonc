@@ -1,0 +1,46 @@
+{
+  "name": "OntologyConcept",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "Method",
+        "Equipment",
+        "Metric",
+        "Condition",
+        "BuildingType",
+        "Concept"
+      ],
+      "default": "Concept"
+    },
+    "definition": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "proposed"
+      ],
+      "default": "approved"
+    },
+    "origin": {
+      "type": "string",
+      "enum": [
+        "seed",
+        "agent-proposed"
+      ],
+      "default": "seed"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

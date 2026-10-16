@@ -1,0 +1,35 @@
+{
+  "name": "ResearchQuestion",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string"
+    },
+    "parsed_focus": {
+      "type": "string"
+    },
+    "parsed_methods": {
+      "type": "string"
+    },
+    "parsed_metrics": {
+      "type": "string"
+    },
+    "parsed_conditions": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "created",
+        "screening",
+        "extracting",
+        "ready",
+        "failed"
+      ],
+      "default": "created"
+    }
+  },
+  "required": [
+    "text"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "Paper",
+  "type": "object",
+  "properties": {
+    "question_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "authors": {
+      "type": "string"
+    },
+    "year": {
+      "type": "string"
+    },
+    "venue": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "included",
+        "excluded"
+      ],
+      "default": "excluded"
+    },
+    "decision_reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "question_id",
+    "title"
+  ]
+}
