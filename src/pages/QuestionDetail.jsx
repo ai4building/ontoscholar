@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  ArrowLeft, Search, Layers, GitCompareArrows, Loader2, AlertTriangle, Table2,
+  ArrowLeft, Search, Layers, GitCompareArrows, Loader2, AlertTriangle, Table2, ChartColumn,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import PapersTable from "@/components/PapersTable";
 import ClaimCard from "@/components/ClaimCard";
 import MatrixView from "@/components/MatrixView";
+import MetricChart from "@/components/MetricChart";
 import QueryBox from "@/components/QueryBox";
 
 const VERDICT_CLS = {
@@ -178,6 +179,19 @@ export default function QuestionDetail() {
             对比矩阵（方法 × 建筑类型 × 节能指标）
           </h3>
           <MatrixView claims={claims} />
+        </section>
+      )}
+
+      {/* 指标对比图表 */}
+      {claims.length > 0 && (
+        <section className="mt-6">
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+            <ChartColumn className="h-4 w-4" />
+            指标数据对比
+          </h3>
+          <div className="rounded-xl border bg-card p-4">
+            <MetricChart claims={claims} papers={papers} />
+          </div>
         </section>
       )}
 
