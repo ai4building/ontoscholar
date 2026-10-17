@@ -34,7 +34,7 @@ export default function ReviewQueue() {
 
   const resolveProposal = async (proposal, decision) => {
     if (decision === "approved") {
-      await base44.entities.OntologyConcept.create({
+      const created = await base44.entities.OntologyConcept.create({
         name: proposal.name,
         domain: proposal.domain || "Concept",
         definition: proposal.definition || "",
@@ -42,6 +42,27 @@ export default function ReviewQueue() {
         status: "approved",
         origin: "agent-proposed",
       });
+      // 记录版本历史：提议 → 确认入库
+      await base44.entities.ConceptRevision.bulkCreate([
+        {
+          concept_id: created.id,
+          version: created.version,
+          name: proposal.name,
+          domain: proposal.domain || "Concept",
+          definition: proposal.definition || "",
+          change_type: "提出",
+          change_note: `来自概念提议：${proposal.rationale || ""}`,
+        },
+        {
+          concept_id: created.id,
+          version: created.version,
+          name: proposal.name,
+          domain: proposal.domain || "Concept",
+          definition: proposal.definition || "",
+          change_type: "确认",
+          change_note: "研究者审核通过，正式发布入库",
+        },
+      ]);
       setConceptCount((n) => n + 1);
     }
     await base44.entities.ConceptProposal.update(proposal.id, { status: decision });

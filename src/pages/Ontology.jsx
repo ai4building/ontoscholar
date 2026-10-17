@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Search, Shapes, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import ConceptHistory from "@/components/ConceptHistory";
 
 const DOMAIN_LABEL = {
   Method: "方法",
@@ -17,6 +18,35 @@ export default function Ontology() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [domain, setDomain] = useState("");
+  const [historyConcept, setHistoryConcept] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [editDef, setEditDef] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = (c) => { setEditing(c); setEditDef(c.definition || ""); };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const segs = (editing.version || "1.0").split(".");
+    segs[segs.length - 1] = String((parseInt(segs[segs.length - 1], 10) || 0) + 1);
+    const version = segs.join(".");
+    await base44.entities.OntologyConcept.update(editing.id, { definition: editDef.trim(), version });
+    await base44.entities.ConceptRevision.create({
+      concept_id: editing.id,
+      version,
+      name: editing.name,
+      domain: editing.domain,
+      definition: editDef.trim(),
+      prev_definition: editing.definition || "",
+      change_type: "修正",
+      change_note: "研究者人工修正定义",
+    });
+    const res = await base44.entities.OntologyConcept.filter({}, { sort: "domain", limit: 200 });
+    setConcepts(res.items);
+    setSaving(false);
+    setEditing(null);
+  };
 
   useEffect(() => {
     (async () => {
@@ -93,6 +123,10 @@ export default function Ontology() {
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{c.definition || "暂无定义。"}</p>
             {c.version && <p className="mt-1.5 text-[11px] text-muted-foreground">版本 {c.version}</p>}
+            <div className="mt-2 flex gap-2">
+              <button onClick={() => setHistoryConcept(c)} className="rounded-lg border px-2.5 py-1 text-[11px] transition hover:bg-accent">版本历史</button>
+              <button onClick={() => startEdit(c)} className="rounded-lg border px-2.5 py-1 text-[11px] transition hover:bg-accent">修正定义</button>
+            </div>
           </div>
         ))}
         {!loading && filtered.length === 0 && (
@@ -101,6 +135,29 @@ export default function Ontology() {
           </p>
         )}
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setEditing(null)}>
+          <div className="w-full max-w-lg rounded-xl border bg-card p-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold">修正概念：{editing.name}</h3>
+            <p className="mt-1 text-[11px] text-muted-foreground">保存后将自动升版本，并记录一条「修正」变更。</p>
+            <textarea
+              value={editDef}
+              onChange={(e) => setEditDef(e.target.value)}
+              rows={4}
+              className="mt-3 w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button onClick={() => setEditing(null)} disabled={saving} className="rounded-lg border px-3 py-1.5 text-xs transition hover:bg-accent">取消</button>
+              <button onClick={saveEdit} disabled={saving} className="rounded-lg bg-foreground px-3 py-1.5 text-xs text-background transition hover:opacity-80 disabled:opacity-40">
+                {saving ? "保存中…" : "保存并升版本"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyConcept && <ConceptHistory concept={historyConcept} onClose={() => setHistoryConcept(null)} />}
     </div>
   );
 }

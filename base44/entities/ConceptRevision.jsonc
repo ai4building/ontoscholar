@@ -1,0 +1,39 @@
+{
+  "name": "ConceptRevision",
+  "type": "object",
+  "properties": {
+    "concept_id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    },
+    "definition": {
+      "type": "string"
+    },
+    "prev_definition": {
+      "type": "string"
+    },
+    "change_type": {
+      "type": "string",
+      "enum": [
+        "\u63d0\u51fa",
+        "\u4fee\u6b63",
+        "\u786e\u8ba4"
+      ]
+    },
+    "change_note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "concept_id",
+    "change_type"
+  ]
+}
