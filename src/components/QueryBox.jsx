@@ -121,34 +121,43 @@ export default function QueryBox({ questionId, preset }) {
           {answer.sources?.length > 0 && (
             <div className="mt-2.5 border-t pt-2.5">
               <p className="text-[11px] font-medium text-muted-foreground">溯源来源（点击上方 [n] 定位）</p>
-              <div className="mt-1.5 space-y-1.5">
-                {answer.sources.map((s) => (
-                  <div
-                    key={s.n}
-                    id={`src-${s.n}`}
-                    className={cn(
-                      "rounded-lg border px-2.5 py-2 text-xs transition",
-                      highlight === s.n ? "border-sky-400 bg-sky-50" : "bg-background"
-                    )}
-                  >
-                    <p className="font-medium">
-                      [{s.n}] {s.paper}
+              <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                {answer.sources.map((s) => {
+                  const pageMatch = String(s.evidence_source || "").match(/(?:p{1,2}\.|page|第)\s*(\d+)\s*(?:页)?/i);
+                  const pageLabel = pageMatch ? `第 ${pageMatch[1]} 页` : s.evidence_source;
+                  return (
+                    <div
+                      key={s.n}
+                      id={`src-${s.n}`}
+                      className={cn(
+                        "flex flex-col rounded-lg border px-3 py-2.5 text-xs transition",
+                        highlight === s.n ? "border-sky-400 bg-sky-50" : "bg-background"
+                      )}
+                    >
+                      <p className="font-medium leading-snug" title={s.paper}>
+                        <span className="text-muted-foreground">[{s.n}]</span> {s.paper}
+                      </p>
+                      {pageLabel && (
+                        <span className="mt-1 w-fit rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {pageLabel}
+                        </span>
+                      )}
+                      {s.evidence_text && (
+                        <p className="mt-1.5 line-clamp-3 leading-relaxed text-muted-foreground">“{s.evidence_text}”</p>
+                      )}
                       {s.url && (
                         <a
                           href={s.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="ml-2 inline-flex items-center gap-0.5 text-sky-700 underline"
+                          className="mt-1.5 inline-flex w-fit items-center gap-1 text-sky-700 underline"
                         >
-                          原文链接 <Link2 className="h-3 w-3" />
+                          <Link2 className="h-3 w-3" /> 查看原文
                         </a>
                       )}
-                    </p>
-                    {s.evidence_text && (
-                      <p className="mt-0.5 leading-relaxed text-muted-foreground">证据：{s.evidence_text}</p>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

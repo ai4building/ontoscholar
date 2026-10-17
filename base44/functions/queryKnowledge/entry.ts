@@ -43,6 +43,7 @@ export default async function(req: Request): Promise<Response> {
         metric_value: c.metric_value ? `${c.metric_value}${c.metric_unit || ''}` : '',
         condition_summary: c.condition_summary,
         evidence_text: c.evidence_text,
+        evidence_source: c.evidence_source || '',
       };
     });
 
