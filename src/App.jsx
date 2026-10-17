@@ -11,6 +11,11 @@ import Chat from './pages/Chat';
 import Home from './pages/Home';
 import QuestionDetail from './pages/QuestionDetail';
 import ReviewQueue from './pages/ReviewQueue';
+import Dashboard from './pages/Dashboard';
+import ResearchClaims from './pages/ResearchClaims';
+import Ontology from './pages/Ontology';
+import Contradictions from './pages/Contradictions';
+import SubmitProposal from './pages/SubmitProposal';
 import AppShell from './components/AppShell';
 
 const AuthenticatedApp = () => {
@@ -44,6 +49,11 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Home />} />
         <Route path="/questions/:id" element={<QuestionDetail />} />
         <Route path="/review" element={<ReviewQueue />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/research-claims" element={<ResearchClaims />} />
+        <Route path="/ontology" element={<Ontology />} />
+        <Route path="/contradictions" element={<Contradictions />} />
+        <Route path="/submit-proposal" element={<SubmitProposal />} />
       </Route>
       <Route path="/chat" element={<Chat />} />
       <Route path="*" element={<PageNotFound />} />

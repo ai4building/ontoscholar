@@ -1,9 +1,14 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { FlaskConical, Library, ClipboardCheck, MessageSquare } from "lucide-react";
+import { FlaskConical, Library, ClipboardCheck, MessageSquare, LayoutDashboard, FileSearch, Shapes, AlertTriangle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "知识库", icon: Library },
+  { to: "/dashboard", label: "知识看板", icon: LayoutDashboard },
+  { to: "/research-claims", label: "科研主张", icon: FileSearch },
+  { to: "/ontology", label: "本体概念", icon: Shapes },
+  { to: "/contradictions", label: "矛盾分析", icon: AlertTriangle },
+  { to: "/submit-proposal", label: "提交提议", icon: Sparkles },
   { to: "/review", label: "审核队列", icon: ClipboardCheck },
   { to: "/chat", label: "SciencePal 对话", icon: MessageSquare },
 ];
