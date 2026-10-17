@@ -1,7 +1,7 @@
 // 知识看板：研究问题、文献发现与本体概念提议的全局状态概览
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Library, FileText, CheckCircle2, Shapes, LayoutDashboard, ArrowRight } from "lucide-react";
+import { Library, FileText, CheckCircle2, Shapes, LayoutDashboard, ArrowRight, FileDown, ExternalLink } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const Q_STATUS = { created: "已创建", screening: "筛选中", extracting: "抽取中", ready: "就绪", failed: "失败" };
@@ -11,6 +11,22 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
+  const [exportError, setExportError] = useState(null);
+
+  const exportToDocs = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const res = await base44.functions.invoke("exportKnowledgeToDocs", {});
+      setExportResult(res.data);
+    } catch {
+      setExportError("导出失败：请确认 Google 账号已连接后重试。");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -49,10 +65,31 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <h2 className="flex items-center gap-2 text-base font-semibold">
-        <LayoutDashboard className="h-4 w-4" /> 知识看板
-      </h2>
-      <p className="mt-1 text-xs text-muted-foreground">研究问题、文献发现与本体概念提议的全局状态概览。</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <LayoutDashboard className="h-4 w-4" /> 知识看板
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">研究问题、文献发现与本体概念提议的全局状态概览。</p>
+        </div>
+        <div className="text-right">
+          <button
+            onClick={exportToDocs}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs text-background transition hover:opacity-80 disabled:opacity-40"
+          >
+            <FileDown className="h-3.5 w-3.5" /> {exporting ? "正在导出…" : "导出到 Google 文档"}
+          </button>
+          {exportResult?.url && (
+            <p className="mt-1.5 text-[11px]">
+              <a href={exportResult.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-700 underline">
+                <ExternalLink className="h-3 w-3" /> 打开已生成的文档
+              </a>
+            </p>
+          )}
+          {exportError && <p className="mt-1.5 text-[11px] text-destructive">{exportError}</p>}
+        </div>
+      </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {cards.map(({ icon: Icon, label, value, sub, to }) => (
