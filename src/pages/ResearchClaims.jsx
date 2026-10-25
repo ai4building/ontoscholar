@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Search, ListFilter, FileSearch } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { safeUrl } from "@/lib/safeUrl";
 
 const STATUS_BADGE = {
   approved: "bg-emerald-100 text-emerald-700",
@@ -114,8 +115,8 @@ export default function ResearchClaims() {
                 <Link to={`/questions/${c.question_id}`} className="underline transition hover:text-foreground">
                   问题：{question.text ? question.text.slice(0, 40) : "未知问题"}
                 </Link>
-                {paper.url ? (
-                  <a href={paper.url} target="_blank" rel="noreferrer" className="underline transition hover:text-foreground">
+                {safeUrl(paper.url) ? (
+                  <a href={safeUrl(paper.url)} target="_blank" rel="noreferrer" className="underline transition hover:text-foreground">
                     文献：{paper.title ? paper.title.slice(0, 40) : "未知文献"} ↗
                   </a>
                 ) : (

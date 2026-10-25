@@ -12,6 +12,9 @@ export default async function(req: Request): Promise<Response> {
     if (!questionId) return Response.json({ error: 'question_id is required' }, { status: 400 });
     const question = await base44.asServiceRole.entities.ResearchQuestion.get(questionId);
     if (!question) return Response.json({ error: '研究问题不存在' }, { status: 404 });
+    if (question.created_by_id !== user.id && user.role !== 'admin') {
+      return Response.json({ error: '无权操作该研究问题' }, { status: 403 });
+    }
 
     const included = await base44.asServiceRole.entities.Paper.filter(
       { question_id: questionId, decision: 'included' },

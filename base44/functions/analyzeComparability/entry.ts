@@ -11,6 +11,15 @@ export default async function(req: Request): Promise<Response> {
     const questionId = String(body.question_id || '');
     if (!questionId) return Response.json({ error: 'question_id is required' }, { status: 400 });
 
+    let question: any = null;
+    try {
+      question = await base44.asServiceRole.entities.ResearchQuestion.get(questionId);
+    } catch { question = null; }
+    if (!question) return Response.json({ error: '研究问题不存在' }, { status: 404 });
+    if (question.created_by_id !== user.id && user.role !== 'admin') {
+      return Response.json({ error: '无权访问该研究问题' }, { status: 403 });
+    }
+
     const claims = await base44.asServiceRole.entities.Claim.filter(
       { question_id: questionId, review_status: { $in: ['approved', 'pending'] } },
       { limit: 12 }

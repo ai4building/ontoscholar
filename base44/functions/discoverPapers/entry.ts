@@ -1,5 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 
+// 仅放行 http(s) 协议的文献链接，防止 javascript:/data: 等危险协议入库
+const safeUrl = (u: string): string => {
+  if (!u) return '';
+  try {
+    const parsed = new URL(u);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? u : '';
+  } catch {
+    return '';
+  }
+};
+
 // Agent ①②③: 解析研究问题 + 检索真实文献 + 纳入/排除筛选（联网）
 export default async function(req: Request): Promise<Response> {
   let questionId = '';
@@ -14,6 +25,9 @@ export default async function(req: Request): Promise<Response> {
 
     const question = await base44.asServiceRole.entities.ResearchQuestion.get(questionId);
     if (!question) return Response.json({ error: '研究问题不存在' }, { status: 404 });
+    if (question.created_by_id !== user.id && user.role !== 'admin') {
+      return Response.json({ error: '无权操作该研究问题' }, { status: 403 });
+    }
 
     await base44.asServiceRole.entities.ResearchQuestion.update(questionId, { status: 'screening' });
 
@@ -61,7 +75,7 @@ export default async function(req: Request): Promise<Response> {
       authors: p.authors || '',
       year: p.year ? String(p.year) : '',
       venue: p.venue || '',
-      url: p.url || '',
+      url: safeUrl(p.url || ''),
       decision: p.decision === 'included' ? 'included' : 'excluded',
       decision_reason: p.decision_reason || '',
     }));

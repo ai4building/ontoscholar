@@ -6,6 +6,10 @@ export default async function(req: Request): Promise<Response> {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // 导出的是全应用知识库数据，仅限管理员执行
+    if (user.role !== 'admin') {
+      return Response.json({ error: '导出整个知识库需要管理员权限' }, { status: 403 });
+    }
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('googledocs');
     if (!accessToken) {

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Send, ShieldAlert, Link2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import { safeUrl } from "@/lib/safeUrl";
 
 export default function QueryBox({ questionId, preset }) {
   const [query, setQuery] = useState("");
@@ -145,9 +146,9 @@ export default function QueryBox({ questionId, preset }) {
                       {s.evidence_text && (
                         <p className="mt-1.5 line-clamp-3 leading-relaxed text-muted-foreground">“{s.evidence_text}”</p>
                       )}
-                      {s.url && (
+                      {safeUrl(s.url) && (
                         <a
-                          href={s.url}
+                          href={safeUrl(s.url)}
                           target="_blank"
                           rel="noreferrer"
                           className="mt-1.5 inline-flex w-fit items-center gap-1 text-sky-700 underline"
