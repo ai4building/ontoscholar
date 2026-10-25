@@ -33,5 +33,15 @@
     "claim_b_id",
     "verdict",
     "explanation"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": null,
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
