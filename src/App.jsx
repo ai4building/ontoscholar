@@ -16,6 +16,7 @@ import ResearchClaims from './pages/ResearchClaims';
 import Ontology from './pages/Ontology';
 import Contradictions from './pages/Contradictions';
 import SubmitProposal from './pages/SubmitProposal';
+import ReviewerActivate from './pages/ReviewerActivate';
 import AppShell from './components/AppShell';
 
 const AuthenticatedApp = () => {
@@ -55,6 +56,7 @@ const AuthenticatedApp = () => {
         <Route path="/contradictions" element={<Contradictions />} />
         <Route path="/submit-proposal" element={<SubmitProposal />} />
       </Route>
+      <Route path="/reviewer-activate" element={<ReviewerActivate />} />
       <Route path="/chat" element={<Chat />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
