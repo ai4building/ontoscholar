@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, RotateCcw, FlaskConical, AlertCircle, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Sparkles, RotateCcw, FlaskConical, AlertCircle, FileText, ArrowLeft } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
@@ -91,6 +92,14 @@ export default function Chat() {
       {/* Header */}
       <header className="flex items-center justify-between gap-2 border-b px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-2.5">
+          <Link
+            to="/"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-accent"
+            title="返回首页"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">返回首页</span>
+          </Link>
           <button
             onClick={() => setLibraryOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-accent md:hidden"
