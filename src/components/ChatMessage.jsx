@@ -1,5 +1,6 @@
 import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import MarkdownMessage from "@/components/MarkdownMessage";
 
 export default function ChatMessage({ role, content, pending }) {
   const isUser = role === "user";
@@ -30,8 +31,12 @@ export default function ChatMessage({ role, content, pending }) {
             <span className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
             <span className="h-2 w-2 animate-bounce rounded-full bg-current" />
           </span>
-        ) : (
+        ) : isUser ? (
           <p className="whitespace-pre-wrap break-words">{content}</p>
+        ) : (
+          <div className="break-words">
+            <MarkdownMessage content={content} />
+          </div>
         )}
       </div>
     </div>
