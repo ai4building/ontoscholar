@@ -6,6 +6,7 @@ import ChatInput from "@/components/ChatInput";
 import AgentPicker from "@/components/AgentPicker";
 import KnowledgeSidebar from "@/components/console/KnowledgeSidebar";
 import PaperPreview from "@/components/console/PaperPreview";
+import LiteratureBrief from "@/components/console/LiteratureBrief";
 import useKnowledgeBrowser from "@/hooks/useKnowledgeBrowser";
 
 const SUGGESTIONS = [
@@ -24,6 +25,7 @@ export default function Chat() {
   const [error, setError] = useState(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [draft, setDraft] = useState(null);
   const scrollRef = useRef(null);
 
   const browser = useKnowledgeBrowser();
@@ -34,6 +36,8 @@ export default function Chat() {
     setPreviewOpen(true);
   };
   const sidebarBrowser = { ...browser, setSelectedPaper: handleSelectPaper };
+
+  const handleQuote = (text) => setDraft({ id: Date.now(), text });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -142,26 +146,39 @@ export default function Chat() {
           <div ref={scrollRef} className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl space-y-6 py-6">
               {isEmpty ? (
-                <div className="flex flex-col items-center justify-center px-6 pt-16 text-center">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                <div className="flex flex-col items-center justify-center px-6 pt-8 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
                     <Sparkles className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <h2 className="text-lg font-semibold">Start a conversation</h2>
-                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                    Send a message to your SciencePal agent. Each new thread starts a fresh
-                    conversation on your account.
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    {selectedPaper
+                      ? "以下是所选文献的详细内容，点击「引用」即可带入对话向 SciencePal 追问。"
+                      : "Send a message to your SciencePal agent, or pick a paper on the left to see its details and cite it here."}
                   </p>
-                  <div className="mt-6 w-full max-w-md space-y-2">
-                    {SUGGESTIONS.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => handleSend(s)}
-                        className="w-full rounded-xl border px-4 py-3 text-left text-sm text-foreground transition hover:bg-accent"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
+
+                  {selectedPaper ? (
+                    <div className="mt-5 flex w-full justify-center">
+                      <LiteratureBrief
+                        paper={selectedPaper}
+                        claims={claims}
+                        loading={claimsLoading}
+                        onQuote={handleQuote}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-6 w-full max-w-md space-y-2">
+                      {SUGGESTIONS.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => handleSend(s)}
+                          className="w-full rounded-xl border px-4 py-3 text-left text-sm text-foreground transition hover:bg-accent"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 messages.map((m, i) => (
@@ -176,7 +193,7 @@ export default function Chat() {
             </div>
           </div>
 
-          <ChatInput onSend={handleSend} disabled={streaming} streaming={streaming} />
+          <ChatInput onSend={handleSend} disabled={streaming} streaming={streaming} draft={draft} />
         </div>
 
         {/* 右侧文献快速预览 */}

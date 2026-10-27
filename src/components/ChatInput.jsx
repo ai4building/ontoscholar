@@ -1,8 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowUp } from "lucide-react";
 
-export default function ChatInput({ onSend, disabled, onStop, streaming }) {
+export default function ChatInput({ onSend, disabled, onStop, streaming, draft }) {
   const [value, setValue] = useState("");
+  const textareaRef = useRef(null);
+
+  // 一键引用：把文献内容填入输入框并聚焦，用户可继续补充问题后发送
+  useEffect(() => {
+    if (draft?.text) {
+      setValue(draft.text);
+      textareaRef.current?.focus();
+    }
+  }, [draft]);
 
   const submit = (e) => {
     e.preventDefault();
@@ -16,6 +25,7 @@ export default function ChatInput({ onSend, disabled, onStop, streaming }) {
     <form onSubmit={submit} className="px-4 sm:px-6 pb-5 pt-2">
       <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-background px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-ring">
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
