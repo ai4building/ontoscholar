@@ -88,18 +88,53 @@ export function parseEventPayload(raw: string): any[] {
   return out;
 }
 
-// Assistant message text carried by one event, if any.
+function parseMaybeJson(value: unknown) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+// SciencePal wraps each payload as a JSON string inside `content`, so the answer
+// text sits one level deeper than a naive read expects.
 export function extractAssistantDelta(ev: any): string {
   if (!ev || typeof ev !== "object") return "";
+  const inner = parseMaybeJson(ev.content);
+  if (inner && typeof inner === "object") {
+    const role = (inner as any).role || (inner as any).message?.role;
+    const content = typeof (inner as any).content === "string"
+      ? (inner as any).content
+      : typeof (inner as any).message?.content === "string"
+        ? (inner as any).message.content
+        : "";
+    if (!content) return "";
+    if (role && role !== "assistant") return "";
+    return content;
+  }
   const role = ev.role || ev.message?.role;
-  const content = typeof ev.content === "string"
-    ? ev.content
-    : typeof ev.message?.content === "string"
-      ? ev.message.content
-      : "";
+  const content = typeof ev.content === "string" ? ev.content : "";
   if (!content) return "";
   if (role && role !== "assistant") return "";
   return content;
+}
+
+// The complete answer carried by the final LLM response event, if present.
+// Delta chunks can arrive out of order, so a full snapshot is always preferred.
+export function extractFinalAnswer(ev: any): string {
+  if (!ev || typeof ev !== "object") return "";
+  const inner = parseMaybeJson(ev.content);
+  const candidates = [inner, ev];
+  for (const c of candidates) {
+    if (!c || typeof c !== "object") continue;
+    const choice = Array.isArray((c as any).choices) ? (c as any).choices[0] : null;
+    const content = choice?.message?.content;
+    if (typeof content === "string" && content.trim()) return content;
+  }
+  return "";
 }
 
 // Accumulate text, guarding against duplicated full replays / deltas.
@@ -126,6 +161,7 @@ export async function consumeRunStream(runId: string, apiKey: string, timeoutMs 
   const decoder = new TextDecoder();
   let buffer = "";
   let text = "";
+  let finalAnswer = "";
   let events: any[] = [];
   while (true) {
     const { done, value } = await reader.read();
@@ -140,6 +176,8 @@ export async function consumeRunStream(runId: string, apiKey: string, timeoutMs 
       if (!payload || payload === "[DONE]") continue;
       for (const ev of parseEventPayload(payload)) {
         events.push(ev);
+        const snapshot = extractFinalAnswer(ev);
+        if (snapshot) finalAnswer = snapshot;
         const delta = extractAssistantDelta(ev);
         if (delta) {
           text = appendText(text, delta);
@@ -151,7 +189,7 @@ export async function consumeRunStream(runId: string, apiKey: string, timeoutMs 
       }
     }
   }
-  return { text, events };
+  return { text: finalAnswer || text, events };
 }
 
 // Final run status (completed / failed / stopped / asked / running).
