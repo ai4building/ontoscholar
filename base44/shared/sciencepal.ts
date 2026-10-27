@@ -27,6 +27,81 @@ export function extractTextFromEvent(ev: any): string {
   return "";
 }
 
+// The stream sometimes double-encodes a payload as a JSON string, and sometimes
+// packs several JSON objects into one `data:` line. Normalise both cases.
+export function parseEventPayload(raw: string): any[] {
+  const out: any[] = [];
+  const scan = (input: string) => {
+    let depth = 0;
+    let start = -1;
+    let inStr = false;
+    let esc = false;
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === "\\") esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === "{") {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (ch === "}") {
+        depth--;
+        if (depth === 0 && start >= 0) {
+          try {
+            out.push(JSON.parse(input.slice(start, i + 1)));
+          } catch {
+            // skip malformed fragment
+          }
+          start = -1;
+        }
+      }
+    }
+  };
+
+  const push = (value: any) => {
+    if (typeof value !== "string") {
+      if (value && typeof value === "object") out.push(value);
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("{")) return;
+    try {
+      const inner = JSON.parse(trimmed);
+      if (inner && typeof inner === "object") out.push(inner);
+      else scan(trimmed);
+    } catch {
+      scan(trimmed);
+    }
+  };
+
+  const trimmed = raw.trim();
+  if (!trimmed) return out;
+  try {
+    push(JSON.parse(trimmed));
+  } catch {
+    scan(trimmed);
+  }
+  return out;
+}
+
+// Assistant message text carried by one event, if any.
+export function extractAssistantDelta(ev: any): string {
+  if (!ev || typeof ev !== "object") return "";
+  const role = ev.role || ev.message?.role;
+  const content = typeof ev.content === "string"
+    ? ev.content
+    : typeof ev.message?.content === "string"
+      ? ev.message.content
+      : "";
+  if (!content) return "";
+  if (role && role !== "assistant") return "";
+  return content;
+}
+
 // Accumulate text, guarding against duplicated full replays / deltas.
 export function appendText(acc: string, chunk: string): string {
   if (!chunk) return acc;
@@ -63,12 +138,16 @@ export async function consumeRunStream(runId: string, apiKey: string, timeoutMs 
       if (!trimmed.startsWith("data:")) continue;
       const payload = trimmed.slice(5).trim();
       if (!payload || payload === "[DONE]") continue;
-      try {
-        const ev = JSON.parse(payload);
+      for (const ev of parseEventPayload(payload)) {
         events.push(ev);
-        text = appendText(text, extractTextFromEvent(ev));
-      } catch {
-        // ignore non-JSON keepalive lines
+        const delta = extractAssistantDelta(ev);
+        if (delta) {
+          text = appendText(text, delta);
+          continue;
+        }
+        // Some events carry the answer under a plain text field instead.
+        const fallback = typeof ev?.answer === "string" ? ev.answer : typeof ev?.text === "string" ? ev.text : "";
+        if (fallback) text = appendText(text, fallback);
       }
     }
   }
