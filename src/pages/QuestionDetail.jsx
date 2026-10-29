@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  ArrowLeft, Search, Layers, GitCompareArrows, Loader2, AlertTriangle, Table2, ChartColumn, CheckCheck,
+  ArrowLeft, Search, Layers, GitCompareArrows, Loader2, AlertTriangle, Table2, ChartColumn, CheckCheck, SearchCheck,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import PapersTable from "@/components/PapersTable";
@@ -9,6 +9,7 @@ import ClaimCard from "@/components/ClaimCard";
 import MatrixView from "@/components/MatrixView";
 import MetricChart from "@/components/MetricChart";
 import QueryBox from "@/components/QueryBox";
+import KeywordCheck from "@/components/KeywordCheck";
 
 const VERDICT_CLS = {
   "真实矛盾": "bg-red-100 text-red-700",
@@ -285,6 +286,15 @@ export default function QuestionDetail() {
           <QueryBox questionId={id} preset={preset} />
         </section>
       )}
+
+      {/* 知识库关键词检查 */}
+      <section className="mt-6">
+        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+          <SearchCheck className="h-4 w-4" />
+          知识库关键词检查
+        </h3>
+        <KeywordCheck questionId={id} />
+      </section>
     </div>
   );
 }

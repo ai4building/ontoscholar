@@ -1,9 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { secrets } from 'base44:runtime';
 import {
-  SCIENCEPAL_BASE_URL,
-  sciencepalHeaders,
-  sciencepalError,
+  startAgentRun,
   consumeRunStream,
   getRunStatus,
 } from '../../shared/sciencepal.ts';
@@ -27,58 +25,8 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'agent_id is required (or set the SCIENCEPAL_AGENT_ID secret)' }, { status: 400 });
     }
 
-    let runId: string;
-    let thread: string;
-
-    if (threadId) {
-      // Continue an existing thread: add message, then start a new run on it.
-      const msgResp = await fetch(`${SCIENCEPAL_BASE_URL}/thread/${threadId}/messages`, {
-        method: 'POST',
-        headers: { ...sciencepalHeaders(apiKey), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message_id: crypto.randomUUID(), content: prompt }),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (!msgResp.ok) {
-        const detail = await msgResp.text().catch(() => '');
-        throw sciencepalError('message', msgResp.status, detail);
-      }
-      const startResp = await fetch(`${SCIENCEPAL_BASE_URL}/thread/${threadId}/agent/start`, {
-        method: 'POST',
-        headers: { ...sciencepalHeaders(apiKey), 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (!startResp.ok) {
-        const detail = await startResp.text().catch(() => '');
-        throw sciencepalError('thread start', startResp.status, detail);
-      }
-      const startData = await startResp.json();
-      runId = startData.agent_run_id;
-      thread = threadId;
-      if (!runId) throw new Error('SciencePal did not return an agent_run_id when starting the thread.');
-    } else {
-      // New conversation: POST /agent/initiate (urlencoded, as documented).
-      const form = new URLSearchParams({
-        agent_id: agentId,
-        prompt,
-        stream: 'true',
-        agent_select_type: 'manual',
-      });
-      const initResp = await fetch(`${SCIENCEPAL_BASE_URL}/agent/initiate`, {
-        method: 'POST',
-        headers: { ...sciencepalHeaders(apiKey), 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: form.toString(),
-        signal: AbortSignal.timeout(120000),
-      });
-      if (!initResp.ok) {
-        const detail = await initResp.text().catch(() => '');
-        throw sciencepalError('initiate', initResp.status, detail);
-      }
-      const run = await initResp.json();
-      thread = run.thread_id;
-      runId = run.agent_run_id;
-      if (!runId) throw new Error('No agent run was created by SciencePal.');
-    }
+    const started = await startAgentRun({ apiKey, agentId, prompt, threadId });
+    const { threadId: thread, runId } = started;
 
     const { text } = await consumeRunStream(runId, apiKey);
     const statusData: any = await getRunStatus(runId, apiKey);

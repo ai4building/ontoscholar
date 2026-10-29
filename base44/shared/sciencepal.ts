@@ -124,11 +124,18 @@ export function extractAssistantDelta(ev: any): string {
 
 // The complete answer carried by the final LLM response event, if present.
 // Delta chunks can arrive out of order, so a full snapshot is always preferred.
+// SciencePal marks the authoritative full message with metadata.stream_status "complete".
 export function extractFinalAnswer(ev: any): string {
   if (!ev || typeof ev !== "object") return "";
+  const meta = parseMaybeJson(ev.metadata);
+  const isComplete =
+    !!meta && typeof meta === "object" && (meta as any).stream_status === "complete";
   const inner = parseMaybeJson(ev.content);
-  const candidates = [inner, ev];
-  for (const c of candidates) {
+  if (isComplete && inner && typeof inner === "object") {
+    const content = typeof (inner as any).content === "string" ? (inner as any).content : "";
+    if (content.trim()) return content;
+  }
+  for (const c of [inner, ev]) {
     if (!c || typeof c !== "object") continue;
     const choice = Array.isArray((c as any).choices) ? (c as any).choices[0] : null;
     const content = choice?.message?.content;
@@ -190,6 +197,65 @@ export async function consumeRunStream(runId: string, apiKey: string, timeoutMs 
     }
   }
   return { text: finalAnswer || text, events };
+}
+
+// Starts an agent run for a prompt: continues the given thread when present,
+// otherwise initiates a new conversation with the configured agent.
+export async function startAgentRun(opts: {
+  apiKey: string;
+  agentId: string;
+  prompt: string;
+  threadId?: string | null;
+}): Promise<{ threadId: string; runId: string }> {
+  const { apiKey, agentId, prompt, threadId } = opts;
+
+  if (threadId) {
+    const msgResp = await fetch(`${SCIENCEPAL_BASE_URL}/thread/${threadId}/messages`, {
+      method: "POST",
+      headers: { ...sciencepalHeaders(apiKey), "Content-Type": "application/json" },
+      body: JSON.stringify({ message_id: crypto.randomUUID(), content: prompt }),
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!msgResp.ok) {
+      const detail = await msgResp.text().catch(() => "");
+      throw sciencepalError("message", msgResp.status, detail);
+    }
+    const startResp = await fetch(`${SCIENCEPAL_BASE_URL}/thread/${threadId}/agent/start`, {
+      method: "POST",
+      headers: { ...sciencepalHeaders(apiKey), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!startResp.ok) {
+      const detail = await startResp.text().catch(() => "");
+      throw sciencepalError("thread start", startResp.status, detail);
+    }
+    const startData = await startResp.json();
+    if (!startData?.agent_run_id) {
+      throw new Error("SciencePal did not return an agent_run_id when starting the thread.");
+    }
+    return { threadId, runId: startData.agent_run_id };
+  }
+
+  const form = new URLSearchParams({
+    agent_id: agentId,
+    prompt,
+    stream: "true",
+    agent_select_type: "manual",
+  });
+  const initResp = await fetch(`${SCIENCEPAL_BASE_URL}/agent/initiate`, {
+    method: "POST",
+    headers: { ...sciencepalHeaders(apiKey), "Content-Type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!initResp.ok) {
+    const detail = await initResp.text().catch(() => "");
+    throw sciencepalError("initiate", initResp.status, detail);
+  }
+  const run = await initResp.json();
+  if (!run?.agent_run_id) throw new Error("No agent run was created by SciencePal.");
+  return { threadId: run.thread_id, runId: run.agent_run_id };
 }
 
 // Final run status (completed / failed / stopped / asked / running).
