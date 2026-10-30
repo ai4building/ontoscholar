@@ -1,6 +1,6 @@
-// 知识库关键词检查：调用 SciencePal API 判断关键词是否被知识库覆盖
+// 知识库关键词检查：由 SciencePal 从研究问题提炼关键词，或核查指定关键词的知识库覆盖情况
 import { useState } from "react";
-import { SearchCheck, Loader2, CheckCircle2, XCircle, AlertTriangle, Quote, BookOpen } from "lucide-react";
+import { SearchCheck, Loader2, CheckCircle2, XCircle, AlertTriangle, Quote, BookOpen, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const SUGGEST_GAP = ["MPC", "强化学习", "能耗基准", "生命周期评价"
 export default function KeywordCheck({ questionId, suggestions = SUGGEST_GAP }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState(null);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
@@ -17,15 +18,17 @@ export default function KeywordCheck({ questionId, suggestions = SUGGEST_GAP }) 
     .map((k) => k.trim())
     .filter(Boolean);
 
-  const check = async () => {
-    if (!keywords.length || loading) return;
+  const run = async (fromQuestion) => {
+    if (loading) return;
+    if (!fromQuestion && !keywords.length) return;
     setLoading(true);
+    setMode(fromQuestion ? "question" : "manual");
     setError(null);
     setResult(null);
     try {
       const response = await base44.functions.invoke("checkKnowledgeKeywords", {
         question_id: questionId,
-        keywords,
+        ...(fromQuestion ? {} : { keywords }),
       });
       setResult(response.data);
     } catch (err) {
@@ -42,26 +45,44 @@ export default function KeywordCheck({ questionId, suggestions = SUGGEST_GAP }) 
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <SearchCheck className="h-3.5 w-3.5" />
-        输入关键词（用逗号或空格分隔，最多 10 个），由 SciencePal 核查知识库是否覆盖。
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <SearchCheck className="h-3.5 w-3.5" />
+          调用 SciencePal API 核查该研究问题的关键词是否为知识库所覆盖。
+        </p>
+        <button
+          onClick={() => run(true)}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs text-background transition hover:opacity-80 disabled:opacity-30"
+        >
+          {loading && mode === "question" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          {loading && mode === "question" ? "核查中…" : "检查本问题的关键词"}
+        </button>
       </div>
 
       <div className="mt-2.5 flex flex-wrap gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && check()}
-          placeholder="例如：MPC，强化学习，能耗基准"
+          onKeyDown={(e) => e.key === "Enter" && run(false)}
+          placeholder="或自行输入关键词（逗号/空格分隔，最多 10 个）"
           className="min-w-56 flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-ring"
         />
         <button
-          onClick={check}
+          onClick={() => run(false)}
           disabled={loading || !keywords.length}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs text-background transition hover:opacity-80 disabled:opacity-30"
+          className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs transition hover:bg-accent disabled:opacity-30"
         >
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SearchCheck className="h-3.5 w-3.5" />}
-          {loading ? "检查中…" : "开始检查"}
+          {loading && mode === "manual" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <SearchCheck className="h-3.5 w-3.5" />
+          )}
+          检查指定关键词
         </button>
       </div>
 
@@ -99,7 +120,8 @@ export default function KeywordCheck({ questionId, suggestions = SUGGEST_GAP }) 
       {result?.results?.length > 0 && (
         <div className="mt-3">
           <p className="text-xs text-muted-foreground">
-            共检查 {result.total} 个关键词，命中{" "}
+            {mode === "question" ? "SciencePal 从研究问题提炼并核查 " : "共检查 "}
+            {result.total} 个关键词，命中{" "}
             <span className="font-medium text-emerald-700">{result.found_count}</span> 个，未命中{" "}
             <span className="font-medium text-muted-foreground">{result.total - result.found_count}</span> 个。
           </p>

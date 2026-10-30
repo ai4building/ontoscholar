@@ -70,7 +70,6 @@ export default async function(req: Request): Promise<Response> {
     const questionId = String(body.question_id || '');
     const keywords = normaliseKeywords(body.keywords);
     if (!questionId) return Response.json({ error: 'question_id 为必填' }, { status: 400 });
-    if (!keywords.length) return Response.json({ error: '请至少输入一个关键词' }, { status: 400 });
 
     let question: any = null;
     try {
@@ -86,10 +85,15 @@ export default async function(req: Request): Promise<Response> {
     const agentId = String(body.agent_id || '') || secrets.get('SCIENCEPAL_AGENT_ID') || '';
     if (!agentId) return Response.json({ error: '未配置 SciencePal Agent（SCIENCEPAL_AGENT_ID）' }, { status: 400 });
 
-    const prompt = `你是科研知识库的核查助手。请仅依据你可检索的知识库内容，判断下列关键词是否在知识库中出现（包含同义表述、缩写展开均可视为命中）。
+    // 未指定关键词时，由 SciencePal 先从研究问题中提炼关键词，再逐个核查知识库覆盖情况。
+    const keywordLine = keywords.length
+      ? `待检查关键词：${keywords.map((k) => `「${k}」`).join('、')}`
+      : `请先从研究问题中提炼 3-6 个核心关键词（研究对象、核心方法、关键指标、边界条件各取要点），再逐个判断它们在知识库中的覆盖情况。`;
+
+    const prompt = `你是科研知识库的核查助手。请仅依据你可检索的知识库内容，判断关键词是否在知识库中出现（包含同义表述、缩写展开均可视为命中）。
 
 研究问题：「${question.text}」
-待检查关键词：${keywords.map((k) => `「${k}」`).join('、')}
+${keywordLine}
 
 严格按以下 JSON 数组输出，不要任何解释或额外文字：
 [{"keyword":"关键词原文","found":true或false,"evidence":"命中的原文证据片段（不超过120字，未命中则为空字符串）","source":"证据来源文献标题或章节（未命中则为空字符串）"}]`;
@@ -115,15 +119,20 @@ export default async function(req: Request): Promise<Response> {
     for (const row of parsed) {
       if (row && typeof row === 'object') byKeyword.set(String(row.keyword || '').trim(), row);
     }
-    const results = keywords.map((kw) => {
-      const hit = byKeyword.get(kw) || parsed.find((r: any) => String(r?.keyword || '').includes(kw));
-      return {
-        keyword: kw,
-        found: !!hit?.found,
-        evidence: typeof hit?.evidence === 'string' ? hit.evidence : '',
-        source: typeof hit?.source === 'string' ? hit.source : '',
-      };
+    const pick = (kw: string, row: any) => ({
+      keyword: kw,
+      found: !!row?.found,
+      evidence: typeof row?.evidence === 'string' ? row.evidence : '',
+      source: typeof row?.source === 'string' ? row.source : '',
     });
+
+    const results = keywords.length
+      ? keywords.map((kw) =>
+          pick(kw, byKeyword.get(kw) || parsed.find((r: any) => String(r?.keyword || '').includes(kw))))
+      : parsed
+          .filter((r: any) => r && typeof r === 'object' && String(r.keyword || '').trim())
+          .map((r: any) => pick(String(r.keyword).trim(), r))
+          .filter((r: any, i: number, arr: any[]) => arr.findIndex((x) => x.keyword === r.keyword) === i);
 
     return Response.json({
       results,
